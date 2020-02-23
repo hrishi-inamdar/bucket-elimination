@@ -97,6 +97,19 @@ def mult(a, b):
 def find_bucket(vars, bucket_ordering):
     return bucket_ordering[min(list(map(bucket_ordering.index, vars)))]
 
+def get_bucket_order(factors):
+    # using min degree
+    # if a variable appears in a clique, it means that it has an edge from itself to every other variable in the clique
+    sets = {}
+    for factor in factors.keys():
+        if len(factor) > 1: # we dont want to waste time with single factors
+            for var in factor:
+                if var not in sets:
+                    sets[var] = set(factor)
+                else:
+                    sets[var] = sets[var].union(set(factor))
+    return sorted([i for i in sets.keys()], key=lambda j: len(sets[j]))
+
 def main():
     """"""
     '''PART 1: loading data'''
@@ -124,7 +137,6 @@ def main():
             net_file.pop(i)
         else:
             i += 1
-    print(net_file)
     i = 1
     num_vars = int(net_file[i])
     i += 1
@@ -149,13 +161,16 @@ def main():
             continue
 
         vals = list(map(float, net_file[i].split()))
-        print(i, j, vals)
         vars = list(clique_keys[j])
         # if any of the variables are part of the evidence, we must eliminate them
         k = 0
         while k < len(vars):
             if vars[k] in evidence:
+                old_vars = tuple(deepcopy(vars))
+
                 vars, vals = sum_out(k, vars, vals, domains, evidence[vars[k]])
+                if old_vars in factors:
+                    factors.pop(old_vars)
                 k -= 1
             k += 1
         vars = tuple(vars)
@@ -176,10 +191,8 @@ def main():
 
 
     '''PART 2: bucket elim'''
-    # make it min-degree later
-    # for now it is just by order of number
 
-    bucket_order = [i for i in range(num_vars)]
+    bucket_order = get_bucket_order(factors)
     buckets = OrderedDict()
     for i in bucket_order:
         buckets[i] = []
@@ -194,29 +207,40 @@ def main():
     for bucket_label in buckets.keys():
         bucket_contents = buckets[bucket_label]
         if bucket_contents:
+            print(bucket_label, bucket_contents)
+            # DO NOT SUM OUT BEFORE PROCESSING ALL FACTORS IN BUCKET!!!
+            # do sum out after this while loop:
             while len(bucket_contents) > 1:
                 vars1 = bucket_contents[0]
                 vars2 = bucket_contents[1]
-                if vars1 == 100:
-                    print(bucket_contents, bucket_label)
-                # print(vars1, vars2)
+                # print(factors)
                 new_vars, new_vals = product(vars1, vars2, factors[vars1], factors[vars2], domains)
+                # print('merging: ', vars1, factors[vars1], vars2, factors[vars2], new_vars, new_vals)
                 bucket_contents.remove(vars1)
                 bucket_contents.remove(vars2)
-                new_vars, new_vals = sum_out(new_vars.index(bucket_label),new_vars,new_vals,domains)
-                # print(new_vars)
+                factors.pop(vars1)
+                if(vars2 in factors):
+                    factors.pop(vars2)
+                bucket_contents.insert(0,new_vars)
+                # print('summing out', new_vars, new_vals)
+                # new_vars, new_vals = sum_out(new_vars.index(bucket_label),new_vars,new_vals,domains)
+                # print('summed out', new_vars, new_vals)
                 if new_vars not in factors:
                     factors[new_vars] = new_vals
-                    buckets[find_bucket(new_vars, bucket_order)] += [new_vars]
+                    # buckets[find_bucket(new_vars, bucket_order)] += [new_vars]
                 else:
                     factors[new_vars] = mult(factors[new_vars], new_vals)
             if len(bucket_contents) == 1:
+                print('before :', bucket_contents)
                 vars = bucket_contents[0]
                 vals = factors[vars]
+                # print('summing out', vars, vals)
                 new_vars, new_vals = sum_out(vars.index(bucket_label), vars, vals, domains)
+                # print('summed out', new_vars, new_vals)
                 bucket_contents.remove(vars)
                 # print('hello', vars, vals, new_vars, new_vals)
                 if new_vars not in factors:
+                    print('newvars ', new_vars)
                     factors[new_vars] = new_vals
                     buckets[find_bucket(new_vars, bucket_order)] += [new_vars]
                 else:
@@ -224,8 +248,9 @@ def main():
                     factors[new_vars] = mult(factors[new_vars], new_vals)
 
 
-    # print(buckets)
-    print(math.log(factors[()][0],10))
+    print(buckets)
+    print(factors)
+    print(round(math.log(factors[()][0], 10), 4))
 
 
 
