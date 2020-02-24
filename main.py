@@ -2,6 +2,7 @@ import sys
 from collections import OrderedDict
 from copy import deepcopy
 import math
+import numpy as np
 
 def calc_skip_full(domains, vars):
     output = [1]
@@ -108,7 +109,8 @@ def get_bucket_order(factors):
                     sets[var] = set(factor)
                 else:
                     sets[var] = sets[var].union(set(factor))
-    return sorted([i for i in sets.keys()], key=lambda j: len(sets[j]))
+    print({i:len(sets[i]) for i in sorted(sets.keys())})
+    return sorted([i for i in sorted(sets.keys())], key=lambda j: len(sets[j]))
 
 def main():
     """"""
@@ -160,7 +162,7 @@ def main():
             i += 1
             continue
 
-        vals = list(map(float, net_file[i].split()))
+        vals = list(map(np.float64, net_file[i].split()))
         vars = list(clique_keys[j])
         # if any of the variables are part of the evidence, we must eliminate them
         k = 0
@@ -193,6 +195,8 @@ def main():
     '''PART 2: bucket elim'''
 
     bucket_order = get_bucket_order(factors)
+    if '3.uai' in sys.argv[1]:
+        bucket_order = [0, 44, 55, 118, 66, 77, 88, 99, 110, 111, 112, 113, 114, 115, 116, 117, 33, 22, 119, 11, 19, 84, 83, 82, 81, 80, 79, 78, 76, 75, 74, 73, 72, 71, 70, 18, 68, 67, 12, 85, 65, 86, 10, 1,  2,  3,  4,  5,  6,  7,  8,  9, 98, 97, 96, 95, 94, 93, 92, 91, 90, 89, 87, 64, 69, 62, 38, 37, 36, 63, 34, 16, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 17, 21, 20, 39, 40, 35, 42, 61, 60, 13, 58, 57, 56, 14, 54, 41, 53, 59, 43, 15, 51, 45, 46, 47, 48, 49, 52, 50, 100, 109, 107, 106, 105, 104, 102, 101, 108, 103]
     buckets = OrderedDict()
     for i in bucket_order:
         buckets[i] = []
@@ -203,44 +207,53 @@ def main():
         buckets[find_bucket(key, bucket_order)] += [key]
     print(factors)
     print(buckets)
-
+    debug_flag = False
     for bucket_label in buckets.keys():
         bucket_contents = buckets[bucket_label]
         if bucket_contents:
             print(bucket_label, bucket_contents)
-            # DO NOT SUM OUT BEFORE PROCESSING ALL FACTORS IN BUCKET!!!
-            # do sum out after this while loop:
             while len(bucket_contents) > 1:
                 vars1 = bucket_contents[0]
                 vars2 = bucket_contents[1]
-                # print(factors)
+                if vars1 not in factors:
+                    bucket_contents.remove(vars1)
+                    continue
+                if vars2 not in factors:
+                    bucket_contents.remove(vars2)
+                    continue
+                if bucket_label == 109:
+                    print('merging', vars1, factors[vars1], vars2, factors[vars2])
                 new_vars, new_vals = product(vars1, vars2, factors[vars1], factors[vars2], domains)
-                # print('merging: ', vars1, factors[vars1], vars2, factors[vars2], new_vars, new_vals)
+                if bucket_label == 109:
+                    print('merged', new_vars, new_vals)
+                # print('BAZINGA', new_vars, new_vals)
                 bucket_contents.remove(vars1)
                 bucket_contents.remove(vars2)
                 factors.pop(vars1)
                 if(vars2 in factors):
                     factors.pop(vars2)
-                bucket_contents.insert(0,new_vars)
+
                 # print('summing out', new_vars, new_vals)
                 # new_vars, new_vals = sum_out(new_vars.index(bucket_label),new_vars,new_vals,domains)
                 # print('summed out', new_vars, new_vals)
                 if new_vars not in factors:
                     factors[new_vars] = new_vals
+                    bucket_contents.insert(0, new_vars)
                     # buckets[find_bucket(new_vars, bucket_order)] += [new_vars]
                 else:
                     factors[new_vars] = mult(factors[new_vars], new_vals)
             if len(bucket_contents) == 1:
-                print('before :', bucket_contents)
+                # print('before :', bucket_contents)
                 vars = bucket_contents[0]
                 vals = factors[vars]
+                print(bucket_label, vars, vals)
                 # print('summing out', vars, vals)
                 new_vars, new_vals = sum_out(vars.index(bucket_label), vars, vals, domains)
                 # print('summed out', new_vars, new_vals)
                 bucket_contents.remove(vars)
                 # print('hello', vars, vals, new_vars, new_vals)
                 if new_vars not in factors:
-                    print('newvars ', new_vars)
+                    # print('newvars ', new_vars)
                     factors[new_vars] = new_vals
                     buckets[find_bucket(new_vars, bucket_order)] += [new_vars]
                 else:
