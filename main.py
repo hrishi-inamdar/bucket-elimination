@@ -64,9 +64,11 @@ def product(vars1, vars2, vals1, vals2, domains):
     '''returns product of factors vars1 and vars2. values of thoe factors are given as vals1 and vals2
         domains are also needed'''
     def get_index(assignment, skip_full):
+        '''given assignment, return the index for the assignment'''
         return sum(mult(assignment, skip_full))
 
     def get_assignment(index, skip, domain):
+        '''given index, return assignment it corresponds to'''
         return (index // skip) % domain
 
     def where_in_array(result_vars, vars):
@@ -99,11 +101,14 @@ def mult(a, b):
 
 
 def find_bucket(vars, bucket_ordering):
+    '''gives which bucket the factor belongs to given a bucket order'''
     return bucket_ordering[min(list(map(bucket_ordering.index, vars)))]
 
 def get_bucket_order(factors):
-    # using min degree
+    '''give a min-degree ordering for buckets'''
+    # the idea is:
     # if a variable appears in a clique, it means that it has an edge from itself to every other variable in the clique
+    # so basically union every clique a variable is in
     sets = {}
     for factor in factors.keys():
         if len(factor) > 1: # we dont want to waste time with single factors
@@ -115,7 +120,7 @@ def get_bucket_order(factors):
     return sorted([i for i in sorted(sets.keys())], key=lambda j: len(sets[j]))
 
 def main():
-    """"""
+
     '''PART 1: loading data'''
     net_file = open(sys.argv[1]).readlines()
     evid_file = open(sys.argv[2]).read().split()[1:]
@@ -190,8 +195,6 @@ def main():
     '''PART 2: bucket elim'''
 
     bucket_order = get_bucket_order(factors)
-    if '3.uai' in sys.argv[1]:
-        bucket_order = [0, 44, 55, 118, 66, 77, 88, 99, 110, 111, 112, 113, 114, 115, 116, 117, 33, 22, 119, 11, 19, 84, 83, 82, 81, 80, 79, 78, 76, 75, 74, 73, 72, 71, 70, 18, 68, 67, 12, 85, 65, 86, 10, 1,  2,  3,  4,  5,  6,  7,  8,  9, 98, 97, 96, 95, 94, 93, 92, 91, 90, 89, 87, 64, 69, 62, 38, 37, 36, 63, 34, 16, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 17, 21, 20, 39, 40, 35, 42, 61, 60, 13, 58, 57, 56, 14, 54, 41, 53, 59, 43, 15, 51, 45, 46, 47, 48, 49, 52, 50, 100, 109, 107, 106, 105, 104, 102, 101, 108, 103]
     buckets = OrderedDict()
     for i in bucket_order:
         buckets[i] = []
