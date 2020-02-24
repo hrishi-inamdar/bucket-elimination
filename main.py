@@ -5,6 +5,7 @@ import math
 import numpy as np
 
 def calc_skip_full(domains, vars):
+    '''calculate skip values for all variables'''
     output = [1]
     for i in range(len(vars)):
         j = len(vars) - i - 1
@@ -17,6 +18,7 @@ def calc_skip_full(domains, vars):
     return output
 
 def calc_skip(domains, vars, index):
+    '''calculate a single skip value for the index given'''
     output = 1
     for i in range(len(vars))[::-1]:
         if i == index:
@@ -26,6 +28,8 @@ def calc_skip(domains, vars, index):
 
 
 def sum_out(index, vars, values, domains, evid_val=-1):
+    '''sums out the variable at the specified index
+        also serves as a way to eliminate evidence if evid_val is given'''
     output = []
     skip = calc_skip(domains, vars, index)
     dom = domains[vars[index]]
@@ -54,10 +58,11 @@ def sum_out(index, vars, values, domains, evid_val=-1):
     vars_copy = list(deepcopy(vars))
     vars_copy.pop(index)
     vars_copy = tuple(vars_copy)
-    # print(skip, vars, values, dom, evid_val)
     return vars_copy, output
 
 def product(vars1, vars2, vals1, vals2, domains):
+    '''returns product of factors vars1 and vars2. values of thoe factors are given as vals1 and vals2
+        domains are also needed'''
     def get_index(assignment, skip_full):
         return sum(mult(assignment, skip_full))
 
@@ -83,15 +88,13 @@ def product(vars1, vars2, vals1, vals2, domains):
         assignments = [get_assignment(i, skip_full_result[j], domains[result_vars[j]]) for j in range(len(skip_full_result))]
         index1 = get_index([assignments[j] for j in where_in_array(result_vars, vars1)], skip_full1)
         index2 = get_index([assignments[j] for j in where_in_array(result_vars, vars2)], skip_full2)
-        # print(index1, index2, vars1, vars2, vals1, vals2)
-        # print(vals1[index1])
-        # print(vals2[index2])
         result_vals += [vals1[index1]*vals2[index2]]
 
     return result_vars, result_vals
 
 
 def mult(a, b):
+    '''element-wise multiplication for vectors'''
     return [i*j for i,j in zip(a,b)]
 
 
@@ -109,7 +112,6 @@ def get_bucket_order(factors):
                     sets[var] = set(factor)
                 else:
                     sets[var] = sets[var].union(set(factor))
-    print({i:len(sets[i]) for i in sorted(sets.keys())})
     return sorted([i for i in sorted(sets.keys())], key=lambda j: len(sets[j]))
 
 def main():
@@ -157,7 +159,6 @@ def main():
     i += 2
     j = 0
     while i < len(net_file):
-        # print(factors.keys())
         if net_file[i] == '':
             i += 1
             continue
@@ -184,12 +185,6 @@ def main():
         j += 1
 
 
-    # print(num_vars, domains, factors)
-    # print(evidence)
-    # print(sum_out(0, [1, 0, 2], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], domains, 0))
-    # print(product((0,1),(0,1),[1,2,3,4],[5,6,7,8],[2,2,2]))
-    #print(product((1,),(1,2),factors[(1,)],factors[(1,2)],domains))
-
 
 
     '''PART 2: bucket elim'''
@@ -205,13 +200,11 @@ def main():
         if not key or factors[key] is None:
             continue
         buckets[find_bucket(key, bucket_order)] += [key]
-    print(factors)
-    print(buckets)
-    debug_flag = False
+    # print(factors)
+    # print(buckets)
     for bucket_label in buckets.keys():
         bucket_contents = buckets[bucket_label]
         if bucket_contents:
-            print(bucket_label, bucket_contents)
             while len(bucket_contents) > 1:
                 vars1 = bucket_contents[0]
                 vars2 = bucket_contents[1]
@@ -221,48 +214,31 @@ def main():
                 if vars2 not in factors:
                     bucket_contents.remove(vars2)
                     continue
-                if bucket_label == 109:
-                    print('merging', vars1, factors[vars1], vars2, factors[vars2])
                 new_vars, new_vals = product(vars1, vars2, factors[vars1], factors[vars2], domains)
-                if bucket_label == 109:
-                    print('merged', new_vars, new_vals)
-                # print('BAZINGA', new_vars, new_vals)
                 bucket_contents.remove(vars1)
                 bucket_contents.remove(vars2)
                 factors.pop(vars1)
                 if(vars2 in factors):
                     factors.pop(vars2)
-
-                # print('summing out', new_vars, new_vals)
-                # new_vars, new_vals = sum_out(new_vars.index(bucket_label),new_vars,new_vals,domains)
-                # print('summed out', new_vars, new_vals)
                 if new_vars not in factors:
                     factors[new_vars] = new_vals
                     bucket_contents.insert(0, new_vars)
-                    # buckets[find_bucket(new_vars, bucket_order)] += [new_vars]
                 else:
                     factors[new_vars] = mult(factors[new_vars], new_vals)
             if len(bucket_contents) == 1:
-                # print('before :', bucket_contents)
                 vars = bucket_contents[0]
                 vals = factors[vars]
-                print(bucket_label, vars, vals)
-                # print('summing out', vars, vals)
                 new_vars, new_vals = sum_out(vars.index(bucket_label), vars, vals, domains)
-                # print('summed out', new_vars, new_vals)
                 bucket_contents.remove(vars)
-                # print('hello', vars, vals, new_vars, new_vals)
                 if new_vars not in factors:
-                    # print('newvars ', new_vars)
                     factors[new_vars] = new_vals
                     buckets[find_bucket(new_vars, bucket_order)] += [new_vars]
                 else:
-                    # print('hello', factors[new_vars])
                     factors[new_vars] = mult(factors[new_vars], new_vals)
 
 
-    print(buckets)
-    print(factors)
+    # print(buckets)
+    # print(factors)
     print(round(math.log(factors[()][0], 10), 4))
 
 
